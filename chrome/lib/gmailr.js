@@ -39,6 +39,19 @@
         return t.parents().index(el) >= 0;
     };
 
+    var getComposeWindows = function(el) {
+        return $("div:has(div:contains(Send)[role=button])[role=dialog]", $(el));
+    };
+    var containsComposeWindow = function(el) {
+        return getComposeWindows(el).length > 0;
+    };
+    
+    var isComposeWindow = function(el) {
+        // Assumes that the only dialogs containing Send buttons are compose windows
+        return ($("div:contains(Send)[role=button]", $(el)).length > 0 && el.getAttribute("role") === "dialog");
+    };
+    
+
     var Gmailr = {
 
         /*****************************************************************************************
@@ -72,7 +85,8 @@
             // Here we do delayed loading until success. This is in the case
             // that our script loads after Gmail has already loaded.
             self.delayed_loader = setInterval(function() {
-                var canvas_frame;
+                var canvas_frame,
+                    observer;
                 self.elements.canvas = (canvas_frame = document.getElementById("canvas_frame")) ?
                     $(canvas_frame.contentDocument) : $(document);
                 self.elements.body   = self.elements.canvas.find('body').first();
@@ -84,6 +98,13 @@
                     self.elements.canvas.bind("DOMSubtreeModified", function(e) {
                         self.detectDOMEvents(e);
                     });
+
+                    // Register MutationObserver
+                    observer = new MutationObserver(function(e) {
+                        self.observeDOMEvents(self, e);
+                        });
+                    observer.observe(document.body, { attributes: false, childList: true, characterData: false, subtree: true });
+
                     clearInterval(self.delayed_loader);
                 } else {
                     dbg('Calling delayed loader...');
@@ -101,6 +122,25 @@
         insertTop: function(el) {
             if(!this.loaded) throw "Call to insertTop before Gmail has loaded";
             this.elements.body.prepend($(el));
+        },
+
+        getComposeWindows: function () {
+            var sendButtonQuery = "div:contains(Send)[role=button]";
+                return $("div:has(" + sendButtonQuery + ")[role=dialog]");
+        },
+
+        /*
+         * MJR: This is so fragile that it makes me sick just thinking about it.
+         * Takes two arguments: the compose window and the element to insert
+         */
+        insertAfterSendButton: function(cw, el) {
+            if(!this.loaded) throw "Call to insertTop before Gmail has loaded";
+            // ID determined by magic. And staring at the DOM while totally sober.
+            var sendButton = $("div:contains(Send)[role=button]", $(cw));
+
+            if (sendButton.length == 0) throw "Can't find Send button. Is compose open?";
+            sendButton = sendButton[0];
+            $(sendButton.parentNode).append($(el));
         },
 
         /*
@@ -133,6 +173,8 @@
          *   'compose'
          *   'viewChanged'
          *   'applyLabel'
+         *   'composeOpened'   - compose window element
+         *   'composeClosed'   - compose window element
          */
         observe: function(type, cb) {
             this.ob_queues[type].push(cb);
@@ -210,7 +252,7 @@
                     } else if(this.priorityInboxLink) {
                         this.leftMenu = this.priorityInboxLink.closest('.TO').closest('div');
                     }
-
+                    
                     if(this.leftMenu && this.leftMenu.length > 0) {
                         this.leftMenuItems = this.leftMenu.find('.TO');
 
@@ -316,7 +358,9 @@
             numUnreadChange: [],
             inboxCountChange: [],
             viewChanged: [],
-            applyLabel: []
+            applyLabel: [],
+            composeOpened: [],
+            composeClosed: []
         },
         loaded: false,
 
@@ -470,6 +514,18 @@
 
         inConversationView: false,
 
+        observeDOMEvents: function(self, es, mi) {
+            
+            // TODO(MJR): Also detect in-conversation compose windows
+            es.forEach(function (mut) {
+                for (var i = 0; i < mut.addedNodes.length; i++) {
+                    if(containsComposeWindow(mut.addedNodes[i])) {
+                        self.executeObQueues('composeOpened', mut.addedNodes[i]);
+                    }
+                }
+            });
+        },
+
         detectDOMEvents: function(e) {
             var el = $(e.target);
 
@@ -488,6 +544,20 @@
                     this.currentNumUnread = this.numUnread();
                 }
             }*/
+
+            if(el[0].getAttribute("role") === "dialog") {
+                p("DOM Event! ");
+            }
+            
+            if(isComposeWindow(el[0])) {
+                p("Compose Opened!");
+                if (e.attrChange === "ADDITION") {
+                    this.executeObQueues('composeOpened', el[0]);
+                }
+                else if (e.attrChange === "REMOVAL") {
+                    this.executeObQueues('composeClosed', el[0]);
+                }
+            }
 
             if(this.elements.canvas.find('.ha').length > 0) {
                 if(!this.inConversationView) {

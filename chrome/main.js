@@ -10,6 +10,15 @@ Gmailr.init(function(G) {
     G.insertCss(getData('css_path'));
     G.insertTop($("<div id='gmailr'><span>Gmailr Status:</span> <span id='status'>Loaded.</span> </div>"));
 
+    G.observe('composeOpened', function(cw) {
+        status("You opened Compose!");
+    });
+
+    G.observe('composeOpened', function(cw) {
+        var newSendButton = $("<div id='gmailr-send-button' class='T-I J-J5-Ji aoO T-I-atl L3' role='button' tabindex='1' style='-webkit-user-select: none;'>I do nothing!</div>");
+        G.insertAfterSendButton(cw, newSendButton);
+    });
+
     var status = function(msg) {
         G.$('#gmailr #status').html(msg);
     };
