@@ -545,19 +545,6 @@
                 }
             }*/
 
-            if(el[0].getAttribute("role") === "dialog") {
-                p("DOM Event! ");
-            }
-            
-            if(isComposeWindow(el[0])) {
-                p("Compose Opened!");
-                if (e.attrChange === "ADDITION") {
-                    this.executeObQueues('composeOpened', el[0]);
-                }
-                else if (e.attrChange === "REMOVAL") {
-                    this.executeObQueues('composeClosed', el[0]);
-                }
-            }
 
             if(this.elements.canvas.find('.ha').length > 0) {
                 if(!this.inConversationView) {
