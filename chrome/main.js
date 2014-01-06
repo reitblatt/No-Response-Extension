@@ -23,6 +23,10 @@ Gmailr.init(function(G) {
         G.$('#gmailr #status').html(msg);
     };
 
+    G.observe('viewChanged', function(view) {
+        status('You changed view to ' + view + '.');
+    });
+
     G.observe('archive', function(num) {
         status('You archived ' + num + ' emails.');
     });

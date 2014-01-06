@@ -95,15 +95,15 @@
                     if(delayed_loader_count != 0)
                         dbg('Delayed loader success, email: ' + self.emailAddress() );
 
-                    self.elements.canvas.bind("DOMSubtreeModified", function(e) {
-                        self.detectDOMEvents(e);
-                    });
-
                     // Register MutationObserver
                     observer = new MutationObserver(function(e) {
-                        self.observeDOMEvents(self, e);
-                        });
-                    observer.observe(document.body, { attributes: false, childList: true, characterData: false, subtree: true });
+                        self.detectDOMEvents(self, e);
+                    });
+                    observer.observe(document.body, { attributes: false, 
+                                                      childList: true, 
+                                                      characterData: false, 
+                                                      subtree: true });
+
 
                     clearInterval(self.delayed_loader);
                 } else {
@@ -355,7 +355,6 @@
             tabChange: [],
             compose: [],
             numUnreadChange: [],
-            inboxCountChange: [],
             viewChanged: [],
             applyLabel: [],
             composeOpened: [],
@@ -512,37 +511,17 @@
 
         inConversationView: false,
 
-        observeDOMEvents: function(self, es, mi) {
+        detectDOMEvents: function(self, es, mi) {
             
             // TODO(MJR): Also detect in-conversation compose windows
             es.forEach(function (mut) {
+
                 for (var i = 0; i < mut.addedNodes.length; i++) {
                     if(containsComposeWindow(mut.addedNodes[i])) {
                         self.executeObQueues('composeOpened', mut.addedNodes[i]);
                     }
                 }
             });
-        },
-
-        detectDOMEvents: function(e) {
-            var el = $(e.target);
-
-            // Left Menu Changes
-            /*var s = this.liveLeftMenuItem();
-            if(this.currentLeftMenuItem != s) {
-                this.currentLeftMenuItem = s;
-                this.executeObQueues('tabChange', s);
-            }
-
-            // Unread change
-            var l = this.inboxLink ? this.inboxLink : this.priorityInboxLink;
-            if((el[0] == l[0]) || isDescendant(el, l)) {
-                if(this.currentNumUnread != this.numUnread()) {
-                    this.executeObQueues('numUnreadChange', this.numUnread(), this.currentNumUnread);
-                    this.currentNumUnread = this.numUnread();
-                }
-            }*/
-
 
             if(this.elements.canvas.find('.ha').length > 0) {
                 if(!this.inConversationView) {
@@ -556,17 +535,8 @@
                 }
             }
 
-            // Inbox count change
-            if(isDescendant(this.toolbarEl(), el)) {
-                var toolbarCount = this.toolbarCount();
-                if(this.inboxTabHighlighted() && toolbarCount !== null) {
-                    if((this.currentInboxCount === null) || (toolbarCount != this.currentInboxCount)) {
-                        if(this.currentInboxCount !== null)
-                            this.executeObQueues('inboxCountChange', toolbarCount, this.currentInboxCount);
-                        this.currentInboxCount = toolbarCount;
-                    }
-                }
-            }
+
+
         },
 
         executeObQueues: function(type, arg) {
