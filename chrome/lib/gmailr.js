@@ -174,7 +174,6 @@
          *   'viewChanged'
          *   'applyLabel'
          *   'composeOpened'   - compose window element
-         *   'composeClosed'   - compose window element
          */
         observe: function(type, cb) {
             this.ob_queues[type].push(cb);
@@ -360,7 +359,6 @@
             viewChanged: [],
             applyLabel: [],
             composeOpened: [],
-            composeClosed: []
         },
         loaded: false,
 
